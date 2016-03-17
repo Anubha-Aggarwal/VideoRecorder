@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">VideoRecorder</string>
-    <string name="captureButton">Capture</string>
+    <string name="captureButtonImage">Capture Image</string>
+    <string name="captureButtonVideo">Capture Video</string>
 </resources>

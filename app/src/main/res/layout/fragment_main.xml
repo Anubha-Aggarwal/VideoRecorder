@@ -8,11 +8,26 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:id="@+id/camera_preview"></FrameLayout>
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/captureButton"
-        android:id="@+id/button_capture"
-        android:layout_gravity="center"
-        />
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/captureButtonImage"
+            android:id="@+id/button_capture_image"
+            android:layout_alignParentLeft="true"
+            android:layout_marginLeft="@dimen/activity_horizontal_margin"
+            />
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:text="@string/captureButtonVideo"
+            android:layout_marginRight="@dimen/activity_horizontal_margin"
+            android:id="@+id/button_capture_video"
+            />
+
+    </RelativeLayout>
+
 </LinearLayout>

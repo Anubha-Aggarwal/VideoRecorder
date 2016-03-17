@@ -4,6 +4,8 @@ import android.app.Fragment;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
+import android.media.CamcorderProfile;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -27,13 +29,16 @@ import java.util.Date;
 public class MainFragment extends Fragment {
     private static int cameraId=-1;
     private  static Camera camera;
+    private static MediaRecorder mediaRecorder;
+    private  static CameraPreview cameraPreview;
+    private boolean isRecording=false;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView=inflater.inflate(R.layout.fragment_main,container,false);
-        CameraPreview cameraPreview=new CameraPreview(getActivity(),getCameraInstance(),cameraId);
+        cameraPreview=new CameraPreview(getActivity(),getCameraInstance(),cameraId);
         FrameLayout preview=(FrameLayout)rootView.findViewById(R.id.camera_preview);
         preview.addView(cameraPreview);
-        Button capture=(Button) rootView.findViewById(R.id.button_capture);
+        Button capture=(Button) rootView.findViewById(R.id.button_capture_image);
         capture.setOnClickListener(new View.OnClickListener() {
             /**
              * Called when a view has been clicked.
@@ -42,27 +47,58 @@ public class MainFragment extends Fragment {
              */
             @Override
             public void onClick(View v) {
-               camera.takePicture(null, null, new Camera.PictureCallback() {
-                    @Override
-                    public void onPictureTaken(byte[] data, Camera camera) {
-                        File pictureFile=getOutputMediaFile(MEDIA_TYPE_IMAGE);
-                        if (pictureFile == null){
-                            Log.d( "Storage tag","Error creating media file, check storage permissions"
-                                    );
-                            return;
-                        }
-                        try
-                        {
-                            FileOutputStream outputStream=new FileOutputStream(pictureFile);
-                            outputStream.write(data);
-                            outputStream.close();
-                        } catch (FileNotFoundException e) {
-                            Log.d("Storage tag", "File not found: " + e.getMessage());
-                        } catch (IOException e) {
-                            Log.d("Storage tag", "Error accessing file: " + e.getMessage());
-                        }
+               camera.takePicture(new Camera.ShutterCallback() {
+                   @Override
+                   public void onShutter() {
+
+                   }
+               }, null, new Camera.PictureCallback() {
+                   @Override
+                   public void onPictureTaken(byte[] data, Camera camera) {
+                       File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+                       if (pictureFile == null) {
+                           Log.d("Storage tag", "Error creating media file, check storage permissions"
+                           );
+                           return;
+                       }
+                       try {
+                           FileOutputStream outputStream = new FileOutputStream(pictureFile);
+                           outputStream.write(data);
+                           outputStream.close();
+                           camera.startPreview();
+                       } catch (FileNotFoundException e) {
+                           Log.d("Storage tag", "File not found: " + e.getMessage());
+                       } catch (IOException e) {
+                           Log.d("Storage tag", "Error accessing file: " + e.getMessage());
+                       }
+                   }
+               });
+            }
+        });
+        final Button captureVideo=(Button)rootView.findViewById(R.id.button_capture_video);
+        captureVideo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(isRecording)
+                {
+                    mediaRecorder.stop();
+                    mediaRecorder.release();
+                    camera.lock();
+                    captureVideo.setText("Capture Video");
+                    isRecording=false;
+                }
+                else
+                {
+                    if(prepareVideoRecorder()) {
+                        mediaRecorder.start();
+                        captureVideo.setText("Stop");
+                        isRecording=true;
                     }
-                });
+                    else
+                    {
+                        mediaRecorder.release();
+                    }
+                }
             }
         });
         return rootView;
@@ -125,5 +161,35 @@ public class MainFragment extends Fragment {
         return mediaFile;
     }
 
-
+    private boolean prepareVideoRecorder()
+    {
+        try {
+            mediaRecorder = new MediaRecorder();
+            //unlock and set camera to media recorder
+            camera.unlock();
+            mediaRecorder.setCamera(camera);
+            // set audio and video source
+            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
+            mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+            //set profile of media recorder
+            mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
+            //set output file
+            mediaRecorder.setOutputFile(getOutputMediaFile(MEDIA_TYPE_VIDEO).toString());
+            //preview display
+            mediaRecorder.setPreviewDisplay(cameraPreview.getHolder().getSurface());
+            //prepare
+            mediaRecorder.prepare();
+        }catch (IllegalStateException e) {
+            Log.d("TAG", "IllegalStateException preparing MediaRecorder: " + e.getMessage());
+            //releaseMediaRecorder();
+            mediaRecorder.release();
+            return false;
+        } catch (IOException e) {
+            Log.d("TAG", "IOException preparing MediaRecorder: " + e.getMessage());
+            //releaseMediaRecorder();
+            mediaRecorder.release();
+            return false;
+        }
+        return true;
+    }
 }
